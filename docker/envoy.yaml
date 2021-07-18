@@ -1,50 +1,50 @@
+admin:
+  address:
+    socket_address: { address: 0.0.0.0, port_value: 8081 }
+
 static_resources:
   listeners:
-  - address:
-      socket_address:
-        address: 0.0.0.0
-        port_value: 443
+  - name: listener_0
+    address:
+      socket_address: { address: 0.0.0.0, port_value: 443 }
     filter_chains:
-      tls_context:
-        common_tls_context:
-          tls_certificates:
-          - certificate_chain:
-              filename: "/etc/ssl/envoy.crt"
-            private_key:
-              filename: "/etc/ssl/envoy.key"
-      filters:
-      - name: envoy.http_connection_manager
-        config:
-          codec_type: auto
+    - filters:
+      - name: envoy.filters.network.http_connection_manager
+        typed_config:
+          "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
           stat_prefix: ingress_http
+          codec_type: AUTO
           route_config:
             name: local_route
             virtual_hosts:
-            - name: service
-              domains:
-              - "*"
+            - name: local_service
+              domains: ["*"]
               routes:
-              - match:
-                  prefix: "/"
-                route:
-                  cluster: local_service
+              - match: { prefix: "/" }
+                route: { cluster: local_service }
           http_filters:
-          - name: envoy.router
-            config: {}
+          - name: envoy.filters.http.router
+      transport_socket:
+        name: envoy.transport_sockets.tls
+        typed_config:
+          "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
+          common_tls_context:
+            tls_certificates:
+            - certificate_chain:
+                filename: /etc/ssl/envoy.crt
+              private_key:
+                filename: /etc/ssl/envoy.key
   clusters:
   - name: local_service
     connect_timeout: 0.5s
-    type: strict_dns
-    lb_policy: round_robin
-    hosts:
-    - socket_address:
-        address: 127.0.0.1
-        port_value: 8080
-
-admin:
-  access_log_path: "/dev/null"
-  address:
-    socket_address:
-      address: 0.0.0.0
-      port_value: 8081
-
+    type: STRICT_DNS
+    lb_policy: ROUND_ROBIN
+    load_assignment:
+      cluster_name: local_service
+      endpoints:
+      - lb_endpoints:
+        - endpoint:
+            address:
+              socket_address:
+                address: 127.0.0.1
+                port_value: 8080
