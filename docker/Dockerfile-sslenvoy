@@ -1,7 +1,10 @@
 FROM envoyproxy/envoy-dev:latest
 
+ENV DNS_NAME=""
+
 RUN apt-get update && apt-get -q install -y \
-    curl
+    curl \
+    && rm -rf /var/lib/apt/lists/*
 
 ADD start_envoy.sh /start_envoy.sh
 ADD envoy.yaml /etc/envoy.yaml
